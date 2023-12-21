@@ -120,41 +120,50 @@ impl Component for FlightComputer {
     }
 }
 
-struct Heater {
+struct Heaters {
     component_name: String,
     rail_voltage: f32,
-    power_loss: f32,
+    power_loss_per_heater: f32,
     power_draw_per_heater: f32,
-    operational: bool,
+    heater_1_on: bool,
+    heater_2_on: bool,
 }
 
-impl Heater {
-    pub fn new() -> Heater {
-        Heater {
-            component_name: String::from("Heater"),
+impl Heaters {
+    pub fn new() -> Heaters {
+        Heaters {
+            component_name: String::from("Heaters"),
             rail_voltage: 12.0,
-            power_loss: 0.175,
+            power_loss_per_heater: 0.175,
             power_draw_per_heater: 2.5, // Half of total as there are two heaters
-            operational: false, // Assuming heaters are off by default
+            heater_1_on: false, // Assuming heaters are off by default
+            heater_2_on: false, // Assuming heaters are off by default
         }
     }
 
-    pub fn set_operational(&mut self, state: bool) {
-        self.operational = state;
+    pub fn on_heater_1(&mut self, state: bool) {
+        self.heater_1_on = state;
     }
+    pub fn on_heater_2(&mut self, state: bool) {
+        self.heater_2_on = state;
+    }
+
 }
 
-impl Component for Heater {
+impl Component for Heaters {
     fn get_name(&self) -> &String {
         &self.component_name
     }
 
     fn get_power_draw(&mut self) -> f32 {
-        if self.operational {
-            self.power_draw_per_heater + self.power_loss
-        } else {
-            0.0
+        let mut power: f32 = 0.0;
+        if self.heater_1_on {
+            power += self.power_draw_per_heater + self.power_loss_per_heater
         }
+        if self.heater_2_on{
+            power += self.power_draw_per_heater + self.power_loss_per_heater
+        }
+        power
     }
 
     fn get_current(&mut self) -> f32 {
@@ -166,8 +175,6 @@ impl Component for Heater {
         self.rail_voltage
     }
 }
-
-
 struct Communication{
     component_name: String,
     uhf_rail_voltage: f32,
@@ -263,7 +270,6 @@ impl Component for Communication{
 }
 
 
-
 struct Navigation{
     component_name: String,
     gps_rail_voltage: f32,
@@ -357,6 +363,12 @@ impl Component for Navigation{
     }
 }
 
+struct power_supply{
+    camera: EventCamera,
+    f_computer: FlightComputer,
+    
+}
+
 fn main() {
     let mut camera = EventCamera::new();
     println!("Event Camera Power Draw: {}W", camera.get_power_draw());
@@ -366,7 +378,7 @@ fn main() {
     f_computer.disable_components();
     println!("Flight Computer Power Draw: {}W", f_computer.get_power_draw());
 
-    let mut heater = Heater::new();
+    let mut heater = Heaters::new();
     println!("Heater Power Draw: {}W", heater.get_power_draw());
     heater.set_operational(true);
     println!("Heater Power Draw: {}W", heater.get_power_draw());
