@@ -168,6 +168,100 @@ impl Component for Heater {
 }
 
 
+struct Communication{
+    component_name: String,
+    uhf_rail_voltage: f32,
+    s_rail_voltage: f32,
+    uhf_power_loss: Vec<f32>,
+    s_power_loss: Vec<f32>,
+    uhf_state: bool, // true is transmit, false is receive (standby)
+    s_state: bool, // true is transmit, false is receive (standby)
+}
+
+impl Communication{
+    pub fn new() -> Communication {
+        Communication {
+            component_name: String::from("Communication"),
+            uhf_rail_voltage: 3.3,
+            s_rail_voltage: 12.0,
+            uhf_power_loss: vec![0.8, 0.025], // transmit, receive
+            s_power_loss: vec![0.84, 0.007], // transmit, receive
+            uhf_state: false,
+            s_state: false,
+        }
+    }
+    // true is transmit, false is receive (standby)
+    pub fn enable_s_band(& mut self, state: bool) {
+        self.s_state = state;
+    }
+    // true is transmit, false is receive (standby)
+    pub fn enable_uhf_band(& mut self, state: bool) {
+        self.uhf_state = state;
+
+    }
+
+    pub fn get_uhf_power(& mut self) -> f32{
+        let power: f32;
+
+        if self.uhf_state{
+            // if transmitting
+            power = 8.0 + self.uhf_power_loss[0];
+        }
+        else{
+            power = 0.25 + self.uhf_power_loss[1];
+        }
+        power
+    }
+
+    pub fn get_s_power(& mut self) -> f32{
+        let power: f32;
+
+        if self.s_state{
+            // if transmitting
+            power = 12.0 + self.s_power_loss[0];
+        }
+        else{
+            power = 0.1 + self.s_power_loss[1];
+        }
+        power
+    }
+
+    pub fn get_s_voltage(&mut self) -> f32{
+        self.s_rail_voltage
+    }
+    pub fn get_uhf_voltage(&mut self) -> f32{
+        self.uhf_rail_voltage
+    }
+    pub fn get_uhf_current(&mut self) -> f32 {
+        // Current = Power / Voltage
+        self.get_uhf_power() / self.uhf_rail_voltage
+    }
+    pub fn get_s_current(&mut self) -> f32 {
+        // Current = Power / Voltage
+        self.get_s_power() / self.s_rail_voltage
+    }
+}
+
+impl Component for Communication{
+    fn get_name(&self) -> &String {
+        &self.component_name
+    }
+
+    fn get_power_draw(&mut self) -> f32 {
+        self.get_s_power() + self.get_uhf_power()
+    }
+
+    fn get_current(&mut self) -> f32 {
+        // Current = Power / Voltage
+        (self.get_s_power() / self.s_rail_voltage) + (self.get_uhf_power() + self.uhf_rail_voltage)
+    }
+
+    fn get_voltage(&mut self) -> f32 {
+        // use get_s_voltage() or get_uhf_voltage()
+        0.0
+    }
+}
+
 fn main() {
     let mut camera = EventCamera::new();
     println!("Event Camera Power Draw: {}W", camera.get_power_draw());
@@ -182,4 +276,14 @@ fn main() {
     heater.set_operational(true);
     println!("Heater Power Draw: {}W", heater.get_power_draw());
     println!("Event Camera Power Draw: {}W", camera.get_power_draw());
+
+    let mut communication_comm = Communication::new();
+    println!("Communications Power Draw: {}W", communication_comm.get_power_draw());
+    communication_comm.enable_s_band(true);
+    println!("Communications Current: {}A", communication_comm.get_current());
+    communication_comm.enable_uhf_band(true);
+    println!("Communications Power Draw: {}W", communication_comm.get_power_draw());
+
+
+
 }
