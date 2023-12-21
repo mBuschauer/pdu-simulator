@@ -286,7 +286,7 @@ impl Navigation{
             component_name: String::from("Navigation"),
             gps_rail_voltage: 5.0,
             maneuvering_rail_voltage: 5.0, // this might not be correct 
-            gps_power_loss: 0.18, 
+            gps_power_loss: 0.18,
             maneuvering_power_loss: vec![0.2614, 0.0887], // maneuvering, passive
             gps_state: true,
             maneuvering_state: false,
@@ -363,36 +363,54 @@ impl Component for Navigation{
     }
 }
 
-struct power_supply{
+struct PowerSupply{
     camera: EventCamera,
-    f_computer: FlightComputer,
-    
+    flight_computer: FlightComputer,
+    heater_components: Heaters,
+    communication_computer: Communication,
+    navigation_computer: Navigation,
+}
+
+impl PowerSupply{
+    pub fn new() -> PowerSupply{
+        PowerSupply{
+            camera: EventCamera::new(),
+            flight_computer: FlightComputer::new(),
+            heater_components: Heaters::new(),
+            communication_computer: Communication::new(),
+            navigation_computer: Navigation::new()
+        }
+    }
+    pub fn get_power_draw(& mut self) -> f32{
+        0.636 + self.camera.get_power_draw() + self.flight_computer.get_power_draw() + self.heater_components.get_power_draw() + self.communication_computer.get_power_draw() + self.navigation_computer.get_maneuvering_power()
+    }
+
 }
 
 fn main() {
-    let mut camera = EventCamera::new();
-    println!("Event Camera Power Draw: {}W", camera.get_power_draw());
+    let mut psu = PowerSupply::new();
+    println!("Event Camera Power Draw: {}W", psu.camera.get_power_draw());
 
-    let mut f_computer = FlightComputer::new();
-    println!("Flight Computer Power Draw: {}W", f_computer.get_power_draw());
-    f_computer.disable_components();
-    println!("Flight Computer Power Draw: {}W", f_computer.get_power_draw());
+    println!("Flight Computer Power Draw: {}W", psu.flight_computer.get_power_draw());
+    psu.flight_computer.disable_components();
+    println!("Flight Computer Power Draw: {}W", psu.flight_computer.get_power_draw());
 
-    let mut heater = Heaters::new();
-    println!("Heater Power Draw: {}W", heater.get_power_draw());
-    heater.set_operational(true);
-    println!("Heater Power Draw: {}W", heater.get_power_draw());
-    println!("Event Camera Power Draw: {}W", camera.get_power_draw());
+    println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
+    psu.heater_components.on_heater_1(true);
+    println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
+    psu.heater_components.on_heater_2(true);
+    println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
 
-    let mut communication_comm = Communication::new();
-    println!("Communications Power Draw: {}W", communication_comm.get_power_draw());
-    communication_comm.enable_s_band(true);
-    println!("Communications Current: {}A", communication_comm.get_current());
-    communication_comm.enable_uhf_band(true);
-    println!("Communications Power Draw: {}W", communication_comm.get_power_draw());
+    println!("Communications Power Draw: {}W", psu.communication_computer.get_power_draw());
+    psu.communication_computer.enable_s_band(true);
+    println!("Communications Current: {}A", psu.communication_computer.get_current());
+    psu.communication_computer.enable_uhf_band(true);
+    println!("Communications Power Draw: {}W", psu.communication_computer.get_power_draw());
 
-    let mut navigation_comm = Navigation::new();
-    println!("Navigations Power Draw: {}W", navigation_comm.get_power_draw());
-    navigation_comm.enable_maneuvering(true);
-    println!("Navigations Power Draw: {}W", navigation_comm.get_power_draw());
+    println!("Navigations Power Draw: {}W", psu.navigation_computer.get_power_draw());
+    psu.navigation_computer.enable_maneuvering(true);
+    println!("Navigations Power Draw: {}W", psu.navigation_computer.get_power_draw());
+
+    println!("Total Power Draw: {}W", psu.get_power_draw());
+
 }
