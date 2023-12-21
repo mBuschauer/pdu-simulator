@@ -1,4 +1,6 @@
 use std::time::{Instant};
+use std::{thread, time};
+use rand::Rng;
 
 trait Component{
     fn get_name(& self) -> &String;
@@ -34,7 +36,7 @@ impl Component for EventCamera {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_update).as_secs_f32(); // Get the elapsed time in seconds
 
-        (3.0 / 5.0) * ((elapsed / 5.0).cos() + 1.0) + self.power_loss + 0.3
+        (3.0 / 5.0) * (((elapsed + rand::thread_rng().gen_range(-2..2) as f32) / 5.0).cos() + 1.0) + self.power_loss + 0.3
     }
 
     fn get_current(&mut self) -> f32 {
@@ -75,9 +77,9 @@ impl FlightComputer{
         }
     }
 
-    pub fn disable_components(& mut self) -> (){
-        self.bbb_connected = false;
-        self.ethernet_enabled = false;
+    pub fn enable_components(& mut self, state: bool) -> (){
+        self.bbb_connected = state;
+        self.ethernet_enabled = state;
     }
 
 }
@@ -389,28 +391,34 @@ impl PowerSupply{
 
 fn main() {
     let mut psu = PowerSupply::new();
-    println!("Event Camera Power Draw: {}W", psu.camera.get_power_draw());
+    // println!("Event Camera Power Draw: {}W", psu.camera.get_power_draw());
 
-    println!("Flight Computer Power Draw: {}W", psu.flight_computer.get_power_draw());
-    psu.flight_computer.disable_components();
-    println!("Flight Computer Power Draw: {}W", psu.flight_computer.get_power_draw());
+    // println!("Flight Computer Power Draw: {}W", psu.flight_computer.get_power_draw());
+    psu.flight_computer.enable_components(true);
+    // println!("Flight Computer Power Draw: {}W", psu.flight_computer.get_power_draw());
 
-    println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
+    // println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
     psu.heater_components.on_heater_1(true);
-    println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
+    // println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
     psu.heater_components.on_heater_2(true);
-    println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
+    // println!("Heaters Power Draw: {}W", psu.heater_components.get_power_draw());
 
-    println!("Communications Power Draw: {}W", psu.communication_computer.get_power_draw());
+    // println!("Communications Power Draw: {}W", psu.communication_computer.get_power_draw());
     psu.communication_computer.enable_s_band(true);
-    println!("Communications Current: {}A", psu.communication_computer.get_current());
+    // println!("Communications Current: {}A", psu.communication_computer.get_current());
     psu.communication_computer.enable_uhf_band(true);
-    println!("Communications Power Draw: {}W", psu.communication_computer.get_power_draw());
+    // println!("Communications Power Draw: {}W", psu.communication_computer.get_power_draw());
 
-    println!("Navigations Power Draw: {}W", psu.navigation_computer.get_power_draw());
+    // println!("Navigations Power Draw: {}W", psu.navigation_computer.get_power_draw());
     psu.navigation_computer.enable_maneuvering(true);
-    println!("Navigations Power Draw: {}W", psu.navigation_computer.get_power_draw());
+    // println!("Navigations Power Draw: {}W", psu.navigation_computer.get_power_draw());
 
-    println!("Total Power Draw: {}W", psu.get_power_draw());
+    while true{
+        let ten_millis = time::Duration::from_millis(100);
+        // println!("Camera Power Draw: {}W", psu.camera.get_power_draw());
+        println!("Total Power Draw: {}W", psu.get_power_draw());
+
+        thread::sleep(ten_millis);
+    }    
 
 }
