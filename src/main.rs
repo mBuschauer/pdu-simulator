@@ -262,6 +262,101 @@ impl Component for Communication{
     }
 }
 
+
+
+struct Navigation{
+    component_name: String,
+    gps_rail_voltage: f32,
+    maneuvering_rail_voltage: f32,
+    gps_power_loss: f32,
+    maneuvering_power_loss: Vec<f32>,
+    gps_state: bool, // true is on, false is off (should always be on)
+    maneuvering_state: bool, // true is maneuvering, false is "passive
+}
+
+impl Navigation{
+    pub fn new() -> Navigation{
+        Navigation{
+            component_name: String::from("Navigation"),
+            gps_rail_voltage: 5.0,
+            maneuvering_rail_voltage: 5.0, // this might not be correct 
+            gps_power_loss: 0.18, 
+            maneuvering_power_loss: vec![0.2614, 0.0887], // maneuvering, passive
+            gps_state: true,
+            maneuvering_state: false,
+        }
+    }
+
+    // true is transmit, false is receive (standby)
+    pub fn enable_gps(& mut self, state: bool) {
+        self.gps_state = state;
+    }
+    // true is transmit, false is receive (standby)
+    pub fn enable_maneuvering(& mut self, state: bool) {
+        self.maneuvering_state = state;
+
+    }
+
+    pub fn get_gps_power(& mut self) -> f32{
+        if self.gps_state{
+            return 1.8 + self.gps_power_loss;
+        }
+        else{
+            return 0.0
+        }
+    }
+
+    pub fn get_maneuvering_power(& mut self) -> f32{
+        let power: f32;
+
+        if self.maneuvering_state{
+            // if transmitting
+            power = 3.72 + self.maneuvering_power_loss[0];
+        }
+        else{
+            power = 1.27 + self.maneuvering_power_loss[1];
+        }
+        power
+    }
+
+    pub fn get_gps_voltage(&mut self) -> f32{
+        self.gps_rail_voltage
+    }
+    pub fn get_maneuvering_voltage(&mut self) -> f32{
+        self.maneuvering_rail_voltage
+    }
+    pub fn get_gps_current(&mut self) -> f32 {
+        // Current = Power / Voltage
+        self.get_gps_power() / self.gps_rail_voltage
+    }
+    pub fn get_maneuvering_current(&mut self) -> f32 {
+        // Current = Power / Voltage
+        self.get_maneuvering_power() / self.maneuvering_rail_voltage
+    }
+
+
+}
+
+impl Component for Navigation{
+    fn get_name(&self) -> &String {
+        &self.component_name
+    }
+
+    fn get_power_draw(&mut self) -> f32 {
+        self.get_gps_power() + self.get_maneuvering_power()
+    }
+
+    fn get_current(&mut self) -> f32 {
+        // Current = Power / Voltage
+        (self.get_gps_power() / self.gps_rail_voltage) + (self.get_maneuvering_power() + self.maneuvering_rail_voltage)
+    }
+
+    fn get_voltage(&mut self) -> f32 {
+        // use get_gps_voltage() or get_maneuvering_voltage()
+        0.0
+    }
+}
+
 fn main() {
     let mut camera = EventCamera::new();
     println!("Event Camera Power Draw: {}W", camera.get_power_draw());
@@ -284,6 +379,8 @@ fn main() {
     communication_comm.enable_uhf_band(true);
     println!("Communications Power Draw: {}W", communication_comm.get_power_draw());
 
-
-
+    let mut navigation_comm = Navigation::new();
+    println!("Navigations Power Draw: {}W", navigation_comm.get_power_draw());
+    navigation_comm.enable_maneuvering(true);
+    println!("Navigations Power Draw: {}W", navigation_comm.get_power_draw());
 }
